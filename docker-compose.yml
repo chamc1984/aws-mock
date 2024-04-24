@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  # localstack:
+  #   container_name: localstack
+  #   image: localstack/localstack
+  #   ports:
+  #     - "127.0.0.1:4566:4566" # LocalStack Gateway
+  #     - "127.0.0.1:4510-4559:4510-4559" # external services port range
+  #   environment:
+  #     - DEBUG=1 # LocalStackのログ出力設定。1にするとリアルタイムログ出力。
+  #     - DOCKER_HOST=unix:///var/run/docker.sock # Docker Engine API に接続するためのUnixソケット
+  #   volumes:
+  #     - "/var/run/docker.sock:/var/run/docker.sock" # ホストとコンテナでソケットを共有することで、コンテナからコンテナを実行できる
+  #     - "./scripts:/etc/localstack/init/ready.d" # 初期化スクリプト
+  #     - "./data:/home/localstack/data"
+
+  moto:
+    image: motoserver/moto:latest
+    container_name: moto
+    environment:
+      MOTO_PORT: 4000
+    ports:
+      - "4000:4000"
+    # networks:
+    #   - external
+    #   - default
+  aws-cli:
+    image: public.ecr.aws/aws-cli/aws-cli
+    container_name: aws-cli
+    tty: true
+    environment:
+      ENDPOINT_URL: http://moto:4000
+      COGNITO_USER_NAME: MY_USER
+      COGNITO_USER_EMAIL: sample@example.com
+      COGNITO_USER_PASSWORD: Password#123
+    # entrypoint: sh -c "chmod +x /opt/bash/create-user-pool.sh && /opt/bash/create-user-pool.sh && tail -f /dev/null"
+    entrypoint: sh -c "tail -f /dev/null"
+    ports:
+      - "4010:4010"
+    depends_on:
+      - moto
+    volumes:
+      - ./aws-cli/bash:/opt/bash
+      - ./aws-cli/.aws:/root/.aws
+      - ./aws-cli/output:/output
+    # networks:
+    #   - external
+    #   - default
